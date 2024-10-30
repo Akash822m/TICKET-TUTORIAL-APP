@@ -1,56 +1,61 @@
-import React from "react";
+"use client";
+import React, { useState, useEffect } from "react";
 import TicketCard from "./(components)/TicketCard";
 
-const getTickets = async () => {
-  try {
-    const res = await fetch("http://localhost:3000/api/Tickets", {
-      cache: "no-store",
-    });
+const Dashboard = () => {
+  const [tickets, setTickets] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
-    if (!res.ok) {
-      throw new Error("Failed to fetch topics");
+  const fetchTickets = async () => {
+    try {
+      const response = await fetch("/api/Tickets", {
+        cache: "no-store",
+      });
+      
+      const data = await response.json();
+      console.log("API Response:", data);
+      
+      if (data.tickets) {
+        setTickets(data.tickets);
+      } else {
+        console.error("No tickets found in the response");
+      }
+    } catch (error) {
+      console.error("Error fetching tickets:", error);
+    } finally {
+      setIsLoading(false);
     }
+  };
 
-    return res.json();
-  } catch (error) {
-    console.log("Error loading topics: ", error);
-  }
-};
+  useEffect(() => {
+    fetchTickets();
+  }, []);
 
-const Dashboard = async () => {
-  const data = await getTickets();
+  // Get unique categories
+  const uniqueCategories = [...new Set(tickets.map(({ category }) => category))];
 
-  // Make sure we have tickets needed for production build.
-  if (!data?.tickets) {
-    return <p>No tickets.</p>;
-  }
-
-  const tickets = data.tickets;
-
-  const uniqueCategories = [
-    ...new Set(tickets?.map(({ category }) => category)),
-  ];
+  if (isLoading) return <p>Loading tickets...</p>;
+  if (!tickets.length) return <p>No tickets available.</p>;
 
   return (
     <div className="p-5">
       <div>
-        {tickets &&
-          uniqueCategories?.map((uniqueCategory, categoryIndex) => (
-            <div key={categoryIndex} className="mb-4">
-              <h2>{uniqueCategory}</h2>
-              <div className="lg:grid grid-cols-2 xl:grid-cols-4 ">
-                {tickets
-                  .filter((ticket) => ticket.category === uniqueCategory)
-                  .map((filteredTicket, _index) => (
-                    <TicketCard
-                      id={_index}
-                      key={_index}
-                      ticket={filteredTicket}
-                    />
-                  ))}
-              </div>
+        {uniqueCategories.map((uniqueCategory, categoryIndex) => (
+          <div key={categoryIndex} className="mb-4">
+            <h2>{uniqueCategory}</h2>
+            <div className="lg:grid grid-cols-2 xl:grid-cols-4">
+              {tickets
+                .filter((ticket) => ticket.category === uniqueCategory)
+                .map((filteredTicket, _index) => (
+                  <TicketCard
+                    id={filteredTicket._id}
+                    key={filteredTicket._id}
+                    ticket={filteredTicket}
+                  />
+                ))}
             </div>
-          ))}
+          </div>
+        ))}
       </div>
     </div>
   );
